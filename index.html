@@ -1,0 +1,1202 @@
+<!doctype html>
+<html lang="ru">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Статус по проектам</title>
+  <style>
+    :root { color-scheme: light; font: 16px/1.5 system-ui, sans-serif; color: #102944; background: #f5f8fc; --blue: #315e87; --light: #dce9f7; --line: #aabbd0; }
+    * { box-sizing: border-box; }
+    body { max-width: 1380px; margin: auto; padding: clamp(12px,2.4vw,32px); }
+    h1,h2,h3,p { margin: 0; }
+    h1 { font-size: clamp(1.65rem,4vw,2.8rem); line-height: 1.15; }
+    h2 { font-size: 1.35rem; }
+    h3 { font-size: 1rem; }
+    header, .summary-bar, .panel { border-radius: 16px; }
+    header { color: white; background: var(--blue); padding: clamp(18px,3vw,32px); }
+    header a { color: white; text-underline-offset: 3px; }
+    .layout { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 7fr); align-items: start; gap: 14px; margin-block: 14px; }
+    .panel { background: white; border: 1px solid var(--line); padding: clamp(14px,2vw,24px); min-width: 0; }
+    .heading, .summary-bar, .actions { display: flex; align-items: center; justify-content: space-between; flex-wrap: wrap; gap: 10px; }
+    .compare { display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 10px; margin-block: 12px; }
+    .version { min-width: 0; border: 1px solid var(--line); border-radius: 12px; overflow: hidden; }
+    .version h3 { padding: 10px 12px; background: var(--light); }
+    .version:first-child h3 { background: var(--blue); color: white; }
+    .content { display: grid; align-content: start; gap: 8px; padding: 12px; overflow-wrap: anywhere; }
+    .muted { color: #4c637b; font-size: .9rem; }
+    .status { white-space: pre-wrap; }
+    button, input, textarea, select { font: inherit; }
+    button, summary { cursor: pointer; }
+    button, .primary { padding: 9px 14px; border: 1px solid var(--line); border-radius: 9px; background: var(--light); color: #153757; font-weight: 650; }
+    button:hover { filter: brightness(.96); }
+    button:disabled { cursor: default; opacity: .55; }
+    .primary { color: white; background: var(--blue); border-color: var(--blue); }
+    :focus-visible { outline: 3px solid #2371c6; outline-offset: 2px; }
+    .projects { display: grid; gap: 8px; padding: 0; margin: 16px 0 0; list-style: none; }
+    .projects button { width: 100%; background: #f6f9fd; text-align: left; }
+    .projects button[aria-pressed="true"] { background: var(--light); border-color: var(--blue); box-shadow: inset 4px 0 var(--blue); }
+    .project-year { display: block; }
+    .badge { display: inline-block; margin-top: 5px; padding: 2px 8px; border-radius: 6px; font-size: .82rem; font-weight: 650; background: #edf2f8; color: #294c70; }
+    .badge.confirmed { color: #235342; background: #e0f2e8; }
+    .badge.unchanged { color: #414b56; background: #eceff2; }
+    .badge.disputed, .saved-review.disputed { color: #633c0a; background: #fff0cf; }
+    .badge.pending { color: #163f6e; background: #dce9fa; margin-inline-start: 5px; }
+    .saved-review { background: #f1f6fb; border-radius: 10px; margin-bottom: 12px; padding: 12px; overflow-wrap: anywhere; }
+    .saved-review .content { padding: 6px 0 0; }
+    .notice:empty { display: none; }
+    .notice { margin-top: 10px; overflow-wrap: anywhere; }
+    .import { display: grid; gap: 11px; margin-top: 12px; padding: 12px; border: 1px solid var(--line); border-radius: 12px; }
+    .import h3 { background: var(--light); padding: 8px 10px; border-radius: 8px; }
+    .rule { padding: 6px 9px; border-radius: 8px; font-size: .9rem; }
+    .pink { background: #fce0e9; }
+    .beige { background: #fff0d5; }
+    .import .actions { justify-content: flex-start; }
+    .table-wrap { overflow: auto; max-height: 320px; border: 1px solid var(--line); border-radius: 8px; }
+    table { border-collapse: collapse; width: 100%; font-size: .88rem; }
+    th,td { text-align: left; vertical-align: top; padding: 8px; overflow-wrap: anywhere; }
+    th { background: var(--light); position: sticky; top: 0; }
+    td { border-top: 1px solid #dee6f0; }
+    td:first-child { white-space: nowrap; }
+    .warnings { margin: 0; padding: 8px 10px 8px 28px; background: #fff2d7; border-radius: 8px; overflow-wrap: anywhere; max-height: 190px; overflow: auto; }
+    .sample { font-size: .88rem; }
+    label { display: grid; gap: 4px; font-weight: 600; min-width: 0; }
+    input, textarea, select { width: 100%; min-width: 0; padding: 8px 10px; color: inherit; border: 1px solid var(--line); border-radius: 8px; background: white; font-weight: 400; }
+    input, textarea { overflow-wrap: anywhere; }
+    textarea { resize: vertical; }
+    .form-fields { display: grid; gap: 12px; margin-bottom: 12px; }
+    .field-error { color: #a12429; font-size: .84rem; font-weight: 500; }
+    [aria-invalid="true"] { border-color: #b73439; }
+    .review-preview { margin-bottom: 12px; }
+    .summary-bar { padding: 14px clamp(14px,2vw,24px); background: var(--light); }
+    .summary-result { margin-top: 10px; }
+    .summary-result textarea { white-space: pre-wrap; }
+    footer { margin: 16px 0 0; color: #4c637b; }
+    footer p { margin-top: 6px; }
+    [hidden] { display: none !important; }
+    @media (max-width: 775px) { .layout { grid-template-columns: minmax(0,1fr); } }
+    @media (max-width: 480px) { .compare { grid-template-columns: minmax(0,1fr); } .summary-bar button { width: 100%; } }
+  </style>
+</head>
+<body>
+  <header class="heading">
+    <div><h1>Статус по проектам</h1><p>Учебный режим</p></div>
+  </header>
+  <main>
+    <p id="storage-notice" class="notice field-error" role="alert"></p>
+    <div class="layout">
+      <section class="panel" aria-labelledby="projects-heading">
+        <div class="heading">
+          <h2 id="projects-heading">Проекты</h2>
+          <button type="button" id="open-import" aria-expanded="false" aria-controls="import">Импорт списка</button>
+        </div>
+        <p id="import-notice" class="notice muted" role="status"></p>
+        <div id="import" class="import" hidden>
+          <h3>Импорт списка</h3>
+          <div id="samples" class="actions"></div>
+          <p class="rule pink"><strong>2026.</strong> Розовый, статус из O</p>
+          <p class="rule beige"><strong>2027.</strong> Розовый или бежевый, статус из T</p>
+          <p class="muted">Заливка в любой ячейке строки. В D берём жирное название без зачёркивания.</p>
+          <p id="import-message" class="muted" role="status"></p>
+          <ul id="warnings" class="warnings" aria-label="Замечания по импорту" hidden></ul>
+          <div id="preview-wrap" class="table-wrap" tabindex="0" role="region" aria-label="Предпросмотр отбора XLSX" hidden>
+            <table>
+              <thead><tr><th scope="col">Лист</th><th scope="col">Проект</th><th scope="col">Статус и ячейка</th><th scope="col">Изменение</th></tr></thead>
+              <tbody id="preview-rows"></tbody>
+            </table>
+          </div>
+          <div class="actions">
+            <button type="button" class="primary" id="confirm-import" disabled>Подтвердить импорт</button>
+            <button type="button" id="cancel-import">Отмена</button>
+          </div>
+        </div>
+        <ul class="projects" id="projects"></ul>
+      </section>
+      <section class="panel" aria-labelledby="project-name">
+        <h2 id="project-name"></h2>
+        <p id="review-notice" class="notice muted" role="status"></p>
+        <form id="review" novalidate>
+        <div class="compare">
+          <section class="version">
+            <h3>Подтверждённый статус</h3>
+            <div class="content" id="confirmed"></div>
+          </section>
+          <section class="version">
+            <h3>Новое обновление</h3>
+            <div class="content">
+              <label>Текст статуса<textarea id="text" rows="3" aria-describedby="text-error"></textarea><span id="text-error" class="field-error"></span></label>
+            </div>
+          </section>
+        </div>
+        <section id="saved-review" class="saved-review" aria-label="Последняя сверка" hidden></section>
+        <section id="pending-review" class="saved-review" aria-label="Обновление из XLSX" hidden>
+          <h3>Обновление из XLSX ждёт сверки</h3>
+          <div id="pending-version" class="content"></div>
+          <button type="button" id="use-imported">Подставить в новое обновление</button>
+        </section>
+        <div class="form-fields">
+          <label>Дата<input id="date" type="date" aria-describedby="date-error"><span id="date-error" class="field-error"></span></label>
+          <label>Источник<input id="source" type="text" aria-describedby="source-error"><span id="source-error" class="field-error"></span></label>
+          <label>Ссылка (если есть)<input id="link" type="url" aria-describedby="link-error"><span id="link-error" class="field-error"></span></label>
+          <label>Что изменилось<textarea id="change" rows="2" aria-describedby="change-error"></textarea><span id="change-error" class="field-error"></span></label>
+          <label>Результат сверки
+            <select id="outcome">
+              <option value="confirmed">Подтверждён</option>
+              <option value="unchanged">Нет изменения статуса</option>
+              <option value="disputed">Требует уточнения</option>
+            </select>
+          </label>
+        </div>
+        <p id="review-preview" class="muted review-preview" aria-live="polite"></p>
+        <button type="submit" class="primary">Сохранить результат сверки</button>
+        </form>
+      </section>
+    </div>
+    <section class="summary-bar" aria-labelledby="summary-heading">
+      <h2 id="summary-heading">Сводка по проектам</h2>
+      <button type="button" class="primary" id="copy-summary">Собрать и скопировать сводку</button>
+    </section>
+    <div class="summary-result">
+      <p id="copy-notice" class="notice muted" role="status"></p>
+      <label id="summary-result" hidden>Текст сводки<textarea id="summary-text" rows="12" readonly></textarea></label>
+    </div>
+  </main>
+  <footer><details><summary>Куда растём</summary><p>После четырёх сводок замерим время подготовки. Дальше можно рассмотреть загрузку обновлений, ботов, совместную работу, сервер, вход и оплату.</p></details></footer>
+  <script>
+    "use strict";
+    // ZIP central directory supplies sizes even when local headers use data descriptors.
+    const ZIP_LIMIT = 64 * 1024 * 1024;
+    const crcTable = Uint32Array.from({length: 256}, (_, index) => {
+      let value = index;
+      for (let bit = 0; bit < 8; bit++) value = (value >>> 1) ^ ((value & 1) ? 0xedb88320 : 0);
+      return value;
+    });
+    function crc32(bytes) {
+      let value = 0xffffffff;
+      for (const byte of bytes) value = (value >>> 8) ^ crcTable[(value ^ byte) & 255];
+      return (value ^ 0xffffffff) >>> 0;
+    }
+
+    function openZip(buffer) {
+      const bytes = new Uint8Array(buffer);
+      const data = new DataView(buffer);
+      const u16 = offset => data.getUint16(offset, true);
+      const u32 = offset => data.getUint32(offset, true);
+      const u64 = offset => {
+        const value = Number(data.getBigUint64(offset, true));
+        if (!Number.isSafeInteger(value)) throw Error("Размер части ZIP превышает поддерживаемый предел.");
+        return value;
+      };
+      if (bytes.length > ZIP_LIMIT) throw Error("Файл XLSX больше 64 МБ.");
+      let end = bytes.length - 22;
+      const first = Math.max(0, end - 65535);
+      for (; end >= first; end--) {
+        if (u32(end) === 0x06054b50 && end + 22 + u16(end + 20) === bytes.length) break;
+      }
+      if (end < first) throw Error("Файл не похож на ZIP-книгу XLSX.");
+      if (u16(end + 4) || u16(end + 6)) throw Error("Разделённый ZIP не поддерживается.");
+      let count = u16(end + 10), size = u32(end + 12), start = u32(end + 16);
+      if (count === 0xffff || size === 0xffffffff || start === 0xffffffff) {
+        const locator = end - 20;
+        if (locator < 0 || u32(locator) !== 0x07064b50 || u32(locator + 4) || u32(locator + 16) !== 1) {
+          throw Error("Не удалось прочитать каталог ZIP64.");
+        }
+        const record = u64(locator + 8);
+        if (record + 56 > locator || u32(record) !== 0x06064b50 || u32(record + 16) || u32(record + 20)) {
+          throw Error("Повреждён каталог ZIP64.");
+        }
+        count = u64(record + 32);
+        size = u64(record + 40);
+        start = u64(record + 48);
+      }
+      if (start + size > end || count > 20000 || count * 46 > size) throw Error("Повреждён каталог ZIP.");
+      const entries = new Map();
+      const utf8 = new TextDecoder("utf-8", {fatal: true});
+      const legacy = new TextDecoder("windows-1252");
+      let position = start;
+      for (let index = 0; index < count; index++) {
+        if (position + 46 > start + size || u32(position) !== 0x02014b50) throw Error("Повреждена запись ZIP.");
+        const flags = u16(position + 8), method = u16(position + 10), crc = u32(position + 16);
+        let compressed = u32(position + 20), length = u32(position + 24), offset = u32(position + 42);
+        const nameStart = position + 46;
+        const extrasStart = nameStart + u16(position + 28);
+        const extrasEnd = extrasStart + u16(position + 30);
+        const next = extrasEnd + u16(position + 32);
+        if (next > start + size || u16(position + 34)) throw Error("Повреждена запись ZIP.");
+        if ([compressed, length, offset].includes(0xffffffff)) {
+          let extra = extrasStart;
+          while (extra + 4 <= extrasEnd && u16(extra) !== 1) extra += 4 + u16(extra + 2);
+          if (extra + 4 > extrasEnd || extra + 4 + u16(extra + 2) > extrasEnd) throw Error("Повреждена запись ZIP64.");
+          const endExtra = extra + 4 + u16(extra + 2);
+          extra += 4;
+          const readSize = value => {
+            if (value !== 0xffffffff) return value;
+            if (extra + 8 > endExtra) throw Error("Повреждён размер ZIP64.");
+            const result = u64(extra);
+            extra += 8;
+            return result;
+          };
+          length = readSize(length);
+          compressed = readSize(compressed);
+          offset = readSize(offset);
+        }
+        const filename = (flags & 0x800 ? utf8 : legacy).decode(bytes.subarray(nameStart, extrasStart));
+        if (entries.has(filename)) throw Error("В ZIP повторяется имя части " + filename + ".");
+        entries.set(filename, {flags, method, crc, compressed, length, offset});
+        position = next;
+      }
+      let remaining = ZIP_LIMIT;
+      async function read(path) {
+        const entry = entries.get(path);
+        if (!entry) throw Error("Не найдена часть " + path + ".");
+        const {flags, method, crc, compressed, length, offset} = entry;
+        if (flags & 1) throw Error("XLSX защищён паролем.");
+        if (length > remaining) throw Error("Распакованные части XLSX превышают 64 МБ.");
+        if (offset + 30 > start || u32(offset) !== 0x04034b50 || u16(offset + 8) !== method) {
+          throw Error("Повреждён заголовок части " + path + ".");
+        }
+        const begin = offset + 30 + u16(offset + 26) + u16(offset + 28);
+        if (begin + compressed > start) throw Error("Повреждена часть " + path + ".");
+        const input = bytes.subarray(begin, begin + compressed);
+        let unpacked;
+        if (method === 0) unpacked = input;
+        else if (method === 8) {
+          const reader = new Blob([input]).stream().pipeThrough(new DecompressionStream("deflate-raw")).getReader();
+          unpacked = new Uint8Array(length);
+          let written = 0;
+          try {
+            while (true) {
+              const chunk = await reader.read();
+              if (chunk.done) break;
+              if (written + chunk.value.length > length) throw Error("Неверный размер распакованной части " + path + ".");
+              unpacked.set(chunk.value, written);
+              written += chunk.value.length;
+            }
+            if (written !== length) throw Error("Неверный размер распакованной части " + path + ".");
+          } catch (error) {
+            await reader.cancel().catch(() => {});
+            throw error;
+          }
+        } else throw Error("Неподдерживаемое сжатие ZIP (метод " + method + ").");
+        if (unpacked.length !== length || crc32(unpacked) !== crc) throw Error("Контрольная сумма части " + path + " не совпадает.");
+        remaining -= length;
+        return unpacked;
+      }
+      return {has: path => entries.has(path), read};
+    }
+
+    const children = (node, name) => [...(node?.children ?? [])].filter(child => child.localName === name);
+    const child = (node, name) => children(node, name)[0];
+    const attr = (node, name) => node?.getAttribute(name) ?? null;
+    const isOn = (node, name) => {
+      const flag = child(node, name);
+      return Boolean(flag && !["0", "false", "off"].includes(attr(flag, "val")));
+    };
+    async function readXml(zip, path, rootName) {
+      const bytes = await zip.read(path);
+      const encoding = bytes[0] === 0xff && bytes[1] === 0xfe || bytes[0] === 0x3c && bytes[1] === 0
+        ? "utf-16le" : bytes[0] === 0xfe && bytes[1] === 0xff || bytes[0] === 0 && bytes[1] === 0x3c
+          ? "utf-16be" : "utf-8";
+      const xml = new TextDecoder(encoding, {fatal: true}).decode(bytes);
+      if (/<!DOCTYPE\b/i.test(xml)) throw Error("Недопустимое объявление XML в " + path + ".");
+      const root = new DOMParser().parseFromString(xml, "application/xml").documentElement;
+      if (root.localName !== rootName || root.getElementsByTagName("parsererror").length) {
+        throw Error("Некорректный XML в " + path + ".");
+      }
+      return root;
+    }
+
+    function relationshipPath(part) {
+      const divider = part.lastIndexOf("/") + 1;
+      return part.slice(0, divider) + "_rels/" + part.slice(divider) + ".rels";
+    }
+
+    function resolvePart(part, target) {
+      if (!target || target.includes("\\") || /^[A-Za-z][\w+.-]*:/.test(target) || target.startsWith("//")) {
+        throw Error("Недопустимая ссылка на часть XLSX.");
+      }
+      const base = target.startsWith("/") ? "" : part.slice(0, part.lastIndexOf("/") + 1);
+      const path = [];
+      for (const segment of (base + target).split("/")) {
+        const name = decodeURIComponent(segment);
+        if (!name || name === ".") continue;
+        if (name === "..") {
+          if (!path.length) throw Error("Ссылка XLSX выходит за пределы книги.");
+          path.pop();
+        } else {
+          if (/[\\/\u0000]/.test(name)) throw Error("Недопустимое имя части XLSX.");
+          path.push(name);
+        }
+      }
+      return path.join("/");
+    }
+
+    async function readRelationships(zip, part) {
+      const root = await readXml(zip, relationshipPath(part), "Relationships");
+      return children(root, "Relationship").map(relation => ({
+        id: attr(relation, "Id"),
+        type: attr(relation, "Type")?.split("/").at(-1),
+        target: attr(relation, "Target"),
+        external: attr(relation, "TargetMode") === "External"
+      }));
+    }
+
+    // Excel's built-in indexed palette and the DrawingML theme color order used by XLSX.
+    const indexedDefaults = (
+      "000000 FFFFFF FF0000 00FF00 0000FF FFFF00 FF00FF 00FFFF " +
+      "000000 FFFFFF FF0000 00FF00 0000FF FFFF00 FF00FF 00FFFF " +
+      "800000 008000 000080 808000 800080 008080 C0C0C0 808080 " +
+      "9999FF 993366 FFFFCC CCFFFF 660066 FF8080 0066CC CCCCFF " +
+      "000080 FF00FF FFFF00 00FFFF 800080 800000 008080 0000FF " +
+      "00CCFF CCFFFF CCFFCC FFFF99 99CCFF FF99CC CC99FF FFCC99 " +
+      "3366FF 33CCCC 99CC00 FFCC00 FF9900 FF6600 666699 969696 " +
+      "003366 339966 003300 333300 993300 993366 333399 333333"
+    ).split(" ");
+    const themeNames = "lt1 dk1 lt2 dk2 accent1 accent2 accent3 accent4 accent5 accent6 hlink folHlink".split(" ");
+    const rgb = value => /^(?:[0-9a-f]{2})?[0-9a-f]{6}$/i.test(value ?? "") ? value.slice(-6).toUpperCase() : null;
+    function tinted(color, tint) {
+      if (!tint) return color;
+      const [red, green, blue] = color.match(/../g).map(value => parseInt(value, 16) / 255);
+      const high = Math.max(red, green, blue), low = Math.min(red, green, blue);
+      const delta = high - low, light = (high + low) / 2;
+      const adjusted = tint < 0 ? light * (1 + tint) : light + (1 - light) * tint;
+      const saturation = delta === 0 ? 0 : delta / (1 - Math.abs(2 * light - 1));
+      const hue = delta === 0 ? 0 : high === red ? (green - blue) / delta : high === green
+        ? (blue - red) / delta + 2 : (red - green) / delta + 4;
+      const chroma = (1 - Math.abs(2 * adjusted - 1)) * saturation;
+      const sector = (hue + 6) % 6, intermediate = chroma * (1 - Math.abs(sector % 2 - 1));
+      const channels = [[chroma, intermediate, 0], [intermediate, chroma, 0], [0, chroma, intermediate],
+        [0, intermediate, chroma], [intermediate, 0, chroma], [chroma, 0, intermediate]][Math.floor(sector)];
+      return channels.map(channel => Math.round((channel + adjusted - chroma / 2) * 255).toString(16).padStart(2, "0")).join("").toUpperCase();
+    }
+
+    function numberAttr(node, name, fallback = null) {
+      const value = attr(node, name);
+      return value !== null && /^\d+$/.test(value) ? Number(value) : fallback;
+    }
+
+    function stylesOf(root, theme) {
+      const scheme = child(child(theme, "themeElements"), "clrScheme");
+      const themed = themeNames.map(name => {
+        const color = child(scheme, name)?.firstElementChild;
+        return rgb(attr(color, "lastClr") ?? attr(color, "val"));
+      });
+      const indexed = children(child(child(root, "colors"), "indexedColors"), "rgbColor")
+        .map(color => rgb(attr(color, "rgb")));
+      const fonts = children(child(root, "fonts"), "font");
+      const fills = children(child(root, "fills"), "fill");
+      const styles = children(child(root, "cellXfs"), "xf");
+      const bases = children(child(root, "cellStyleXfs"), "xf");
+      function property(style, base, name, apply) {
+        return (["0", "false"].includes(attr(style, apply)) ? null : numberAttr(style, name))
+          ?? numberAttr(base, name, 0);
+      }
+      function fillColor(fill) {
+        const pattern = child(fill, "patternFill");
+        if (child(fill, "gradientFill")) return undefined;
+        const type = attr(pattern, "patternType");
+        if (!type || type === "none" || type === "gray125" || type === "gray0625") return null;
+        if (type !== "solid") return undefined;
+        const color = child(pattern, "fgColor");
+        const idx = numberAttr(color, "indexed");
+        const fromTheme = numberAttr(color, "theme");
+        const value = rgb(attr(color, "rgb")) ?? (idx !== null ? indexed[idx] ?? indexedDefaults[idx] : themed[fromTheme]);
+        const tint = Number(attr(color, "tint") ?? 0);
+        return value && Number.isFinite(tint) && Math.abs(tint) <= 1 ? tinted(value, tint) : undefined;
+      }
+      const defaultStyle = {bold: false, strike: false, color: null, unknownFont: false};
+      const resolved = styles.map(style => {
+        const base = bases[numberAttr(style, "xfId", 0)];
+        const fontId = property(style, base, "fontId", "applyFont");
+        const fillId = property(style, base, "fillId", "applyFill");
+        const font = fonts[fontId], fill = fills[fillId];
+        return {
+          bold: isOn(font, "b"), strike: isOn(font, "strike"),
+          unknownFont: !font && (fontId !== 0 || fonts.length > 0),
+          color: fill ? fillColor(fill) : fillId === 0 ? null : undefined
+        };
+      });
+      return id => resolved[id] ?? (id === 0 && !styles.length ? defaultStyle : {unknownFont: true, color: undefined});
+    }
+
+    function excelText(value) {
+      return value.replace(/_x([0-9a-f]{4})_/gi, (_, hex) => String.fromCharCode(parseInt(hex, 16)));
+    }
+    function richString(node) {
+      const runs = children(node, "r");
+      if (!runs.length) return {text: excelText(child(node, "t")?.textContent ?? ""), runs: []};
+      const parts = runs.map(run => ({
+        text: excelText(child(run, "t")?.textContent ?? ""), font: child(run, "rPr")
+      }));
+      return {text: parts.map(run => run.text).join(""), runs: parts};
+    }
+
+    function readCell(cell, shared) {
+      const value = child(cell, "v")?.textContent ?? "";
+      switch (attr(cell, "t")) {
+        case "s": {
+          const item = /^\d+$/.test(value) ? shared[Number(value)] : undefined;
+          if (!item) throw Error("не найдена запись в таблице строк");
+          return item;
+        }
+        case "inlineStr": return richString(child(cell, "is"));
+        case "e": throw Error("ячейка содержит ошибку Excel " + value);
+        case "b": return {text: value === "1" ? "TRUE" : value === "0" ? "FALSE" : value, runs: []};
+        default:
+          if (!child(cell, "v") && child(cell, "f")) throw Error("результат формулы отсутствует в файле");
+          return {text: excelText(value), runs: []};
+      }
+    }
+
+    function readTitle(value, style) {
+      if (!value.text.trim()) return "";
+      if (!value.runs.length) {
+        if (style.unknownFont) throw Error("не удалось определить шрифт названия");
+        return style.bold && !style.strike ? value.text.trim() : "";
+      }
+      if (style.unknownFont && value.runs.some(run => !run.font)) throw Error("не удалось определить шрифт фрагмента");
+      const parts = value.runs.map(run => ({
+        text: run.text, bold: run.font ? isOn(run.font, "b") : style.bold,
+        strike: run.font ? isOn(run.font, "strike") : style.strike
+      }));
+      if (style.strike || parts.some(part => part.strike && part.text.trim())) return "";
+      const first = parts.findIndex(part => part.bold && part.text.trim());
+      if (first < 0) return "";
+      const last = parts.findLastIndex(part => part.bold && part.text.trim());
+      const title = parts.slice(first, last + 1);
+      if (title.some(part => !part.bold && part.text.trim())) throw Error("несколько раздельных жирных фрагментов в названии");
+      return title.map(part => part.text).join("").trim();
+    }
+
+    const sheetRules = {
+      "2026": {column: "O", colors: new Set(["EA9999", "F4CCCC"])},
+      "2027": {column: "T", colors: new Set(["EA9999", "FFF2CC", "FEF1CC"])}
+    };
+    function cellRef(value) {
+      const match = /^\$?([A-Z]{1,3})\$?([1-9][0-9]{0,6})$/i.exec(value ?? "");
+      if (!match) return null;
+      const column = match[1].toUpperCase();
+      const index = [...column].reduce((sum, letter) => sum * 26 + letter.charCodeAt(0) - 64, 0);
+      const row = Number(match[2]);
+      return index <= 16384 && row <= 1048576 ? {column, index, row} : null;
+    }
+    function rangeRef(value) {
+      const [from, to = from, ...rest] = (value ?? "").split(":");
+      const start = cellRef(from), end = cellRef(to);
+      return start && end && !rest.length && start.row <= end.row && start.index <= end.index ? {start, end} : null;
+    }
+    function columnName(index) {
+      let letters = "";
+      while (index > 0) {
+        index--;
+        letters = String.fromCharCode(65 + index % 26) + letters;
+        index = Math.floor(index / 26);
+      }
+      return letters;
+    }
+
+    function readSheet(root, year, styles, shared) {
+      const {column, colors} = sheetRules[year];
+      const rows = child(root, "sheetData");
+      if (!rows) throw Error("не найдены строки листа");
+      const statusIndex = cellRef(column + "1").index;
+      const columns = children(child(root, "cols"), "col").map(col => ({
+        first: numberAttr(col, "min", 0), last: numberAttr(col, "max", 0), style: numberAttr(col, "style")
+      }));
+      const warnings = [], candidates = [], projectRows = new Map();
+      const warn = message => warnings.push(year + " · " + message);
+      const range = rangeRef(attr(child(root, "dimension"), "ref"));
+      const exists = index => Boolean(range && range.start.index <= index && range.end.index >= index
+        || columns.some(col => col.first <= index && col.last >= index));
+      let titleColumn = exists(4), statusColumn = exists(statusIndex);
+      const formatElements = [...root.getElementsByTagNameNS("*", "conditionalFormatting")];
+      const rules = formatElements.flatMap(item =>
+        (attr(item, "sqref") ?? child(item, "sqref")?.textContent ?? "").trim().split(/\s+/).map(rangeRef));
+      if (rules.length) warn("есть условное форматирование. Затронутые строки требуют ручной проверки, архивирование по листу приостановлено.");
+      const allRowsConditional = rules.some(rule => !rule);
+      let previousRow = 0;
+      for (const row of children(rows, "row")) {
+        const cells = children(row, "c");
+        const firstAddress = cells.map(cell => cellRef(attr(cell, "r"))).find(Boolean);
+        const rowNumber = numberAttr(row, "r", firstAddress?.row ?? previousRow + 1);
+        if (rowNumber <= previousRow || rowNumber > 1048576) {
+          warn("некорректный номер строки " + rowNumber + ".");
+          continue;
+        }
+        previousRow = rowNumber;
+        const rowStyle = attr(row, "customFormat") === "0" ? null : numberAttr(row, "s");
+        const parsed = new Map();
+        let previousColumn = 0, malformed = false;
+        for (const cell of cells) {
+          const address = attr(cell, "r");
+          const position = address ? cellRef(address) : cellRef(columnName(previousColumn + 1) + rowNumber);
+          if (!position || position.row !== rowNumber || parsed.has(position.column)) {
+            malformed = true;
+            continue;
+          }
+          previousColumn = position.index;
+          const colStyle = columns.find(col => col.first <= position.index && col.last >= position.index)?.style;
+          parsed.set(position.column, {cell, style: styles(numberAttr(cell, "s") ?? rowStyle ?? colStyle ?? 0)});
+        }
+        titleColumn ||= parsed.has("D");
+        statusColumn ||= parsed.has(column);
+        if (malformed) {
+          warn("строка " + rowNumber + ": адреса ячеек неоднозначны.");
+          continue;
+        }
+        const title = parsed.get("D");
+        if (!title) continue;
+        const condition = allRowsConditional || rules.some(rule => rowNumber >= rule.start.row && rowNumber <= rule.end.row);
+        const rowColor = rowStyle === null ? null : styles(rowStyle).color;
+        const fillColors = [rowColor, ...Array.from(parsed.values(), entry => entry.style.color)];
+        const matches = fillColors.some(color => colors.has(color));
+        const unknownFill = fillColors.includes(undefined);
+        if (!matches && !unknownFill && !condition) continue;
+        try {
+          const name = readTitle(readCell(title.cell, shared), title.style);
+          if (condition && (name || readCell(title.cell, shared).text.trim())) throw Error("оформление зависит от условного правила");
+          if (!name) continue;
+          if (!matches && unknownFill) throw Error("не удалось определить цвет заливки");
+          const status = parsed.get(column);
+          const text = status ? readCell(status.cell, shared).text.trim() : "";
+          const id = projectKey(year, name);
+          const address = column + rowNumber;
+          if (projectRows.has(id)) warn("название «" + name + "» повторяется в D" + projectRows.get(id) + " и D" + rowNumber + ". Строки пропущены.");
+          projectRows.set(id, rowNumber);
+          candidates.push({id, year, name, text, address});
+        } catch (error) {
+          warn("строка " + rowNumber + ": " + error.message + ".");
+        }
+      }
+      if (!titleColumn) warn("не найдена колонка D с названиями.");
+      if (!statusColumn) warn("не найдена колонка " + column + " со статусами. Прежние статусы по листу сохранены.");
+      const frequencies = new Map();
+      for (const record of candidates) frequencies.set(record.id, (frequencies.get(record.id) ?? 0) + 1);
+      return {
+        records: candidates.filter(record => frequencies.get(record.id) === 1)
+          .map(record => ({...record, statusAvailable: statusColumn})),
+        warnings,
+        complete: !warnings.length
+      };
+    }
+
+    async function parseWorkbook(buffer, filename) {
+      const zip = openZip(buffer);
+      const packageRelations = await readRelationships(zip, "");
+      const bookRelation = packageRelations.find(relation => relation.type === "officeDocument" && !relation.external);
+      if (!bookRelation) throw Error("Не найдена главная часть книги XLSX.");
+      const bookPath = resolvePart("", bookRelation.target);
+      const workbook = await readXml(zip, bookPath, "workbook");
+      const relations = await readRelationships(zip, bookPath);
+      const pathFor = relation => resolvePart(bookPath, relation.target);
+      async function optionalPart(type, rootName) {
+        const relation = relations.find(item => item.type === type && !item.external);
+        return relation ? readXml(zip, pathFor(relation), rootName) : null;
+      }
+      const styleRoot = await optionalPart("styles", "styleSheet");
+      const sharedRoot = await optionalPart("sharedStrings", "sst");
+      let theme = null;
+      const warnings = [], records = [], completeYears = new Set();
+      try {
+        theme = await optionalPart("theme", "theme");
+      } catch {
+        warnings.push("Не удалось прочитать тему книги. Заливки, зависящие от темы, требуют проверки.");
+      }
+      const styles = stylesOf(styleRoot, theme);
+      const shared = children(sharedRoot, "si").map(richString);
+      const sheets = children(child(workbook, "sheets"), "sheet");
+      for (const year of Object.keys(sheetRules)) {
+        const matches = sheets.filter(item => attr(item, "name") === year);
+        if (matches.length !== 1) {
+          warnings.push("Лист «" + year + "» " + (matches.length ? "повторяется. Его проекты сохранены." : "отсутствует. Его проекты сохранены."));
+          continue;
+        }
+        const id = [...matches[0].attributes].find(attribute => attribute.localName === "id" && attribute.namespaceURI)?.value;
+        const relation = relations.find(item => item.id === id && item.type === "worksheet" && !item.external);
+        try {
+          if (!relation) throw Error("не найдена внутренняя ссылка на лист");
+          const root = await readXml(zip, pathFor(relation), "worksheet");
+          const sheet = readSheet(root, year, styles, shared);
+          records.push(...sheet.records);
+          warnings.push(...sheet.warnings);
+          if (sheet.complete) completeYears.add(year);
+        } catch (error) {
+          warnings.push("Лист «" + year + "» не прочитан: " + error.message);
+        }
+      }
+      return {filename, records, warnings, completeYears};
+    }
+  </script>
+  <script>
+    "use strict";
+    const byId = id => document.getElementById(id);
+    const statusText = value => value || "Статус не указан";
+    const dateText = value => value ? value.split("-").reverse().join(".") : "Дата не указана";
+    const projectKey = (year, name) => JSON.stringify([year, name.trim()]);
+    const version = (text, date, source, link = "") => ({text, date, source, link});
+    const demoProject = (year, name, confirmed) => ({
+      id: projectKey(year, name), year, name, confirmed, active: true, imported: null
+    });
+    const examples = [
+      demoProject("2026", "Проект 1", version("Проверка завершена", "2026-11-10", "Учебная записка")),
+      demoProject("2027", "Проект 2", version("Срок уточняется", "2026-11-12", "Учебное совещание")),
+      demoProject("2026", "Проект 3", version("Эскиз подготовлен", "2026-11-13", "Учебный протокол"))
+    ];
+    const storageKey = "project-status.public-demo.v1";
+    let storageSnapshot;
+    let projects = loadProjects();
+    let selected = projects[0]?.id ?? null;
+    const fields = ["text", "date", "source", "link", "change", "outcome"];
+    const drafts = new Map();
+    const outcomeLabels = {
+      confirmed: "Подтверждён", unchanged: "Нет изменения статуса", disputed: "Требует уточнения"
+    };
+    const outcomeHints = {
+      confirmed: "Новое обновление станет подтверждённым статусом.",
+      unchanged: "Подтверждённый статус сохранится. Дата и источник будут записаны как реквизиты сверки.",
+      disputed: "Будут сохранены оба варианта. Основным останется подтверждённый статус."
+    };
+    function readProjects(value) {
+      const saved = JSON.parse(value);
+      if (!Array.isArray(saved) || saved.some(project => !project?.id || !project.confirmed)) {
+        throw Error("Неверная структура локальных записей");
+      }
+      return saved;
+    }
+
+    function loadProjects() {
+      try {
+        storageSnapshot = localStorage.getItem(storageKey);
+        if (storageSnapshot !== null) return readProjects(storageSnapshot);
+        return examples;
+      } catch {
+        storageSnapshot = undefined;
+        byId("storage-notice").textContent = "Локальное хранилище не удалось прочитать.";
+        return examples;
+      }
+    }
+
+    function saveProjects(next) {
+      const notice = byId("storage-notice");
+      try {
+        if (storageSnapshot === undefined) throw Error("Хранилище недоступно.");
+        if (localStorage.getItem(storageKey) !== storageSnapshot) {
+          notice.textContent = "Список изменился в другой вкладке. Обнови страницу перед сохранением.";
+          return false;
+        }
+        const payload = JSON.stringify(next);
+        localStorage.setItem(storageKey, payload);
+        storageSnapshot = payload;
+        projects = next;
+        clearSummary();
+        notice.textContent = "";
+        return true;
+      } catch {
+        notice.textContent = "Chrome не смог сохранить данные. Прежний список и статусы сохранены на экране.";
+        return false;
+      }
+    }
+
+    function element(tag, text, className) {
+      const node = document.createElement(tag);
+      if (text !== undefined) node.textContent = text;
+      if (className) node.className = className;
+      return node;
+    }
+
+    function httpUrl(value) {
+      try {
+        const url = new URL(value);
+        return ["http:", "https:"].includes(url.protocol) ? url.href : "";
+      } catch {
+        return "";
+      }
+    }
+
+    function showVersion(container, value) {
+      container.replaceChildren(
+        element("p", statusText(value.text), "status"),
+        element("p", dateText(value.date), "muted"),
+        element("p", value.source, "muted")
+      );
+      const url = httpUrl(value.link);
+      if (url) {
+        const anchor = element("a", "Открыть источник", "muted");
+        anchor.href = url;
+        anchor.target = "_blank";
+        anchor.rel = "noopener noreferrer";
+        container.append(anchor);
+      }
+    }
+
+    function renderProjects() {
+      const list = byId("projects");
+      list.replaceChildren();
+      const active = projects.filter(project => project.active);
+      if (!active.some(project => project.id === selected)) selected = active[0]?.id ?? null;
+      for (const project of active) {
+        const item = element("li");
+        const button = element("button", project.name);
+        button.type = "button";
+        button.setAttribute("aria-pressed", String(project.id === selected));
+        button.append(element("span", project.year, "muted project-year"));
+        if (project.review || !project.pending) {
+          button.append(element("span", outcomeLabels[project.review?.outcome] || "Не сверялся",
+            "badge " + (project.review?.outcome || "")));
+        }
+        if (project.pending) button.append(element("span", "Ждёт сверки", "badge pending"));
+        button.addEventListener("click", () => {
+          selected = project.id;
+          byId("review-notice").textContent = "";
+          [...list.querySelectorAll("button")].forEach(row => row.setAttribute("aria-pressed", String(row === button)));
+          renderProject();
+        });
+        item.append(button);
+        list.append(item);
+      }
+      if (!active.length) list.append(element("li", "Импортируй список проектов из XLSX.", "muted"));
+    }
+
+    function renderProject() {
+      const project = projects.find(item => item.id === selected);
+      byId("project-name").textContent = project?.name ?? "Выбери проект";
+      byId("review").hidden = !project;
+      byId("confirmed").replaceChildren();
+      if (!project) return;
+      showVersion(byId("confirmed"), project.confirmed);
+      showSavedReview(project.review);
+      byId("pending-review").hidden = !project.pending;
+      if (project.pending) showVersion(byId("pending-version"), project.pending);
+      else byId("pending-version").replaceChildren();
+      const disputed = project.review?.outcome === "disputed" ? project.review.update : undefined;
+      showDraft(drafts.get(project.id) ?? project.pending ?? disputed);
+    }
+
+    function showSavedReview(review) {
+      const panel = byId("saved-review");
+      panel.hidden = !review;
+      panel.replaceChildren();
+      if (!review) return;
+      panel.className = "saved-review " + review.outcome;
+      panel.append(element("h3", outcomeLabels[review.outcome]), element("p", review.change, "status"));
+      if (review.outcome === "disputed") {
+        const candidate = element("div", undefined, "content");
+        showVersion(candidate, review.update);
+        candidate.prepend(element("strong", "Спорный вариант"));
+        panel.append(candidate);
+      } else if (review.outcome === "unchanged") {
+        panel.append(element("p", dateText(review.update.date) + " · " + review.update.source, "muted"));
+        const link = httpUrl(review.update.link);
+        if (link) {
+          const anchor = element("a", "Открыть источник сверки", "muted");
+          anchor.href = link;
+          anchor.target = "_blank";
+          anchor.rel = "noopener noreferrer";
+          panel.append(anchor);
+        }
+      }
+    }
+
+    function fieldError(field, message = "") {
+      const hint = byId(field + "-error");
+      if (!hint) return;
+      hint.textContent = message;
+      if (message) byId(field).setAttribute("aria-invalid", "true");
+      else byId(field).removeAttribute("aria-invalid");
+    }
+
+    function showDraft(draft) {
+      for (const name of fields) {
+        byId(name).value = draft?.[name] ?? (name === "outcome" ? "confirmed" : "");
+        fieldError(name);
+      }
+      showOutcome();
+    }
+
+    function readDraft() {
+      return Object.fromEntries(fields.map(name => [name, byId(name).value.trim()]));
+    }
+
+    function showOutcome() {
+      byId("review-preview").textContent = outcomeHints[byId("outcome").value];
+    }
+
+    function updateDraft(event) {
+      byId("review-notice").textContent = "";
+      drafts.set(selected, readDraft());
+      if (event.target.id) fieldError(event.target.id);
+      showOutcome();
+    }
+
+    function validateDraft(draft) {
+      const keep = draft.outcome === "unchanged";
+      const errors = {
+        text: !keep && !draft.text ? "Введи новый статус." : "",
+        date: !draft.date ? "Укажи дату." : "",
+        source: !draft.source ? "Укажи источник." : "",
+        link: draft.link && !httpUrl(draft.link) ? "Укажи ссылку с http:// или https://." : "",
+        change: !keep && !draft.change ? "Кратко опиши изменение." : ""
+      };
+      for (const [name, message] of Object.entries(errors)) fieldError(name, message);
+      const invalid = Object.keys(errors).find(name => errors[name]);
+      if (invalid) byId(invalid).focus();
+      return !invalid;
+    }
+
+    byId("review").addEventListener("input", updateDraft);
+    byId("review").addEventListener("change", updateDraft);
+    byId("use-imported").addEventListener("click", () => {
+      const pending = projects.find(project => project.id === selected)?.pending;
+      if (!pending) return;
+      drafts.set(selected, pending);
+      showDraft(pending);
+      byId("text").focus();
+    });
+    byId("review").addEventListener("submit", event => {
+      event.preventDefault();
+      const draft = readDraft();
+      if (!validateDraft(draft)) return;
+      const project = projects.find(item => item.id === selected);
+      if (!project) return;
+      const text = draft.outcome === "unchanged" ? project.confirmed.text : draft.text;
+      const update = version(text, draft.date, draft.source, draft.link);
+      const revised = {
+        ...project, pending: null,
+        review: {outcome: draft.outcome, update, change: draft.change || "Без изменений"}
+      };
+      if (draft.outcome === "confirmed") revised.confirmed = update;
+      if (!saveProjects(projects.map(item => item === project ? revised : item))) return;
+      drafts.delete(project.id);
+      renderProjects();
+      renderProject();
+      byId("review-notice").textContent = "Результат сверки сохранён.";
+    });
+
+    // Small real XLSX files embedded for offline rehearsal.
+    const samples = [
+      {title: "Основной", filename: "uchebny-osnovnoy.xlsx", data:
+        "UEsDBBQAAAAIAAAAcl23i4LqLQEAACgEAAATAAAAW0NvbnRlbnRfVHlwZXNdLnhtbLWTz04CMRCHX2XTK6EFDsYYFg7+OaqJ+AC1nd1ttp02" +
+        "nQGXtze7EKMGIQa8dA6d+X1f08x82QVfbCCTi1iKqZyIAtBE67AuxevqYXwtCmKNVvuIUIotkFgu5qttAiq64JFK0TCnG6XINBA0yZgAu+Cr" +
+        "mINmkjHXKmnT6hrUbDK5UiYiA/KY+wyxmN9Bpdeei/uOAXceGTyJ4nbX2LNKoVPyzmh2EdUG7Q/KeE+QGfzQQ41LNOqCF+ogob/5HbCfe9pA" +
+        "zs5C8awzP+oApVCdV+8xt28xtvJ4yAHLWFXOgI1mHQBZUsqgLTUAHLwcqgza4eg4n3jrgS5NH0JPkRudwb5wdlhfXOBr9gkPbiDA7pyerTHE" +
+        "nAD2Xz6IkhrK+dTvj//M/6PH7L891LDpiw9QSwMEFAAAAAAAAAByXQjqkx0nAQAAJwEAAAsAAABfcmVscy8ucmVsczw/eG1sIHZlcnNpb249" +
+        "IjEuMCIgZW5jb2Rpbmc9IlVURi04IiBzdGFuZGFsb25lPSJ5ZXMiPz48UmVsYXRpb25zaGlwcyB4bWxucz0iaHR0cDovL3NjaGVtYXMub3Bl" +
+        "bnhtbGZvcm1hdHMub3JnL3BhY2thZ2UvMjAwNi9yZWxhdGlvbnNoaXBzIj48UmVsYXRpb25zaGlwIElkPSJtYWluIiBUeXBlPSJodHRwOi8v" +
+        "c2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvb2ZmaWNlRG9jdW1lbnQvMjAwNi9yZWxhdGlvbnNoaXBzL29mZmljZURvY3VtZW50IiBUYXJn" +
+        "ZXQ9InhsL3dvcmtib29rLnhtbCIvPjwvUmVsYXRpb25zaGlwcz5QSwMEFAAAAAgAAAByXXWF8mXEAAAAQQEAAA8AAAB4bC93b3JrYm9vay54" +
+        "bWyNj8FOwzAQRH/F2jtx4kNBUZxeEBL38gEm3jRWvbuR15Tw94iWIiQunEYaPb3RDPuNsjlj0STsoWtaMMiTxMRHDy+Hp7sHMFoDx5CF0cMH" +
+        "KuzH4V3K6VXkZDbKrB6WWtfeWp0WpKCNrMgb5VkKhaqNlKPVtWCIuiBWyta17c5SSAxXQ1/+45B5ThM+yvRGyPUqKZhDTcK6pFVhHC4L+p2G" +
+        "A6EH17odmEvzHD10YEqfoofSgf1D3v8i3Q/pvkh7k9vb//ETUEsDBBQAAAAAAAAAcl16C4gUPwMAAD8DAAAaAAAAeGwvX3JlbHMvd29ya2Jv" +
+        "b2sueG1sLnJlbHM8P3htbCB2ZXJzaW9uPSIxLjAiIGVuY29kaW5nPSJVVEYtOCIgc3RhbmRhbG9uZT0ieWVzIj8+PFJlbGF0aW9uc2hpcHMg" +
+        "eG1sbnM9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9wYWNrYWdlLzIwMDYvcmVsYXRpb25zaGlwcyI+PFJlbGF0aW9uc2hp" +
+        "cCBJZD0icjEiIFR5cGU9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9vZmZpY2VEb2N1bWVudC8yMDA2L3JlbGF0aW9uc2hp" +
+        "cHMvd29ya3NoZWV0IiBUYXJnZXQ9IndvcmtzaGVldHMvc2hlZXQxLnhtbCIvPjxSZWxhdGlvbnNoaXAgSWQ9InIyIiBUeXBlPSJodHRwOi8v" +
+        "c2NoZW1hcy5vcGVueG1sZm9ybWF0cy5vcmcvb2ZmaWNlRG9jdW1lbnQvMjAwNi9yZWxhdGlvbnNoaXBzL3dvcmtzaGVldCIgVGFyZ2V0PSIv" +
+        "eGwvd29ya3NoZWV0cy9zaGVldDIueG1sIi8+PFJlbGF0aW9uc2hpcCBJZD0icjMiIFR5cGU9Imh0dHA6Ly9zY2hlbWFzLm9wZW54bWxmb3Jt" +
+        "YXRzLm9yZy9vZmZpY2VEb2N1bWVudC8yMDA2L3JlbGF0aW9uc2hpcHMvc3R5bGVzIiBUYXJnZXQ9InN0eWxlcy54bWwiLz48UmVsYXRpb25z" +
+        "aGlwIElkPSJyNCIgVHlwZT0iaHR0cDovL3NjaGVtYXMub3BlbnhtbGZvcm1hdHMub3JnL29mZmljZURvY3VtZW50LzIwMDYvcmVsYXRpb25z" +
+        "aGlwcy9zaGFyZWRTdHJpbmdzIiBUYXJnZXQ9InNoYXJlZFN0cmluZ3MueG1sIi8+PFJlbGF0aW9uc2hpcCBJZD0icjUiIFR5cGU9Imh0dHA6" +
+        "Ly9zY2hlbWFzLm9wZW54bWxmb3JtYXRzLm9yZy9vZmZpY2VEb2N1bWVudC8yMDA2L3JlbGF0aW9uc2hpcHMvdGhlbWUiIFRhcmdldD0idGhl" +
+        "bWUvdGhlbWUxLnhtbCIvPjwvUmVsYXRpb25zaGlwcz5QSwMEFAAAAAgAAAByXSa7OnTCAQAA8wUAAA0AAAB4bC9zdHlsZXMueG1stZRNj9sg" +
+        "EIb/CuLeEKfJqqmAVWXV0l562a3UK47HNtIAFpCV3V9f4Y/UqbpqN1IuZhjPPO8ghuGPvUHyCj5oZwXNNltKwJ5cpW0j6PeX4sMnSkJUtlLo" +
+        "LAg6QKCPkoc4IDy3AJH0Bm0QtI2x+8xYOLVgVNi4DmxvsHbeqBg2zjcsdB5UFVKSQbbbbh+YUdpSyWtnYyAnd7ZR0N3skDz8JK8KBc0yyiS3" +
+        "ysC0zxXq0uvkZFPk9C3Ze3LGJUhea8SL+IFODsk7FSN4W2hEMtsvQweCWmdhwoxx/4huvBqy3eH/E4JDXaUqmtyh88Q3paBF8fXL8Xg8Jkw5" +
+        "/9C2gh4qQR/2I31FvFUrtmBA0P2dZS7I7XuFxiVIXjpfgb/cWkYXl+QIdWSSe920aY2uSxouRmeY5JVWjbMKk8CSMRtB8hMgPqfO/lFfsfua" +
+        "2LMpTHwaiyapcxZTI87mhHlazsXWtIm9wh5uwpK+ng3VdTgUbqpw3mlMjZ+03yJndyOvat7djfzxbuT9bWQ23+qqda4a5+IlaRIJ+i2NQ1zh" +
+        "y7PGqO1fmiYx07sIks8vI5+3vimvRkOxz/M8H7P/iGQLgf2e1/IXUEsDBBQAAAAIAAAAcl1mqgkKIQEAAMUBAAAUAAAAeGwvc2hhcmVkU3Ry" +
+        "aW5ncy54bWyFj8FKw0AQhl9l2ZMe7LYeRMpme/PsQR9gTdY2kN2EnaXUW5se6q2PIL5BFIKlkvgKM29U0mItKHgYmOH/v5l/5GhmMzY1HtLc" +
+        "RXzQ63NmXJwnqRtH/P7u5uKaMwjaJTrLnYn4kwE+UhIgsJnNHER8EkIxFALiibEaenlh3Mxmj7m3OkAv92MBhTc6gYkxwWbist+/ElanjisJ" +
+        "qZJeSX/rlXwQSop9FxS+0BxbrHFLpRShE/40dhmGUOjYRLzwBoyfGq7Y4BeT/suc0ZJWWOMbNt1lhl/Y0poW2GCNDW6wPj9uFV3uro5J37Gm" +
+        "OW6xYviB1WGk5z1ZHbBTBDf4iS2VrJNphdX3lyem1/3eLaMlldjSChtaY00lLWj9YxYAQe0AUEsDBBQAAAAIAAAAcl2jaBWN4wEAAGIHAAAT" +
+        "AAAAeGwvdGhlbWUvdGhlbWUxLnhtbNWVzY6bMBDHXwX53tiQT6KQVcWCetjbtg/ggAE3YzvC1m7yBD32IfoC7aHHvkP2jaqYLBBgd6U2qlRf" +
+        "YMa/+c+Mx4jVzV6A88BKzZUMkDsiyGEyUSmXeYA+fYzfLZCjDZUpBSVZgA5Mo5v1ii5NwQRz9gKkXtIAFcbslhjrpGCC6pHaMbkXkKlSUKNH" +
+        "qsxxWtJHLnMB2CNkhgXlEjmSChag47enL8efxx/HX8fvT19RLR8BE0wafXIkUN4nNueLMenWPT10mW9CKJ0HCgEidiG8XuEaANPnYrvO3BlI" +
+        "t16PG7vTaDGv9bxKr8/dhpEfz2s9C9AkYXI4txeGZ7YFVa997ei97/v+Bd/SH/f1J2HY0R83/KTPR7Hb4ScNP339TFpQ9Trr8R6ZRpPbC95C" +
+        "BXC5HZxgPZkayRR8GMQXhJDF88AbCrduUBUvzVv3SdDPqoyVNHbI1HDpmMOOZTRhAQop8E3JT4noktHWTuVKdMeFO4KCyyurN4K43aBtV7zZ" +
+        "bcYB7s0B2J22JWkFPI05gDVscH3IuyKE8pz2kvtHQbhfL8hLy3kM0Gw8JejPU4BspFxvTq6m5ZO/rgt3O2ZZxhLzgqcx77SpJAd3rw/joco2" +
+        "efyf3bZuxbj1TVmr88N69qx/A1BLAwQUAAAACAAAAHJdit/PX8UBAAC8AwAAGAAAAHhsL3dvcmtzaGVldHMvc2hlZXQxLnhtbH2T327TMBTG" +
+        "X8XyPXX+tBGaHE8T1W6HBDxAaL01WuJUttWWuy5DGtIu0B4AENxwG5DKSqWWVzjnjZADzdqq7Z2d4+/7fuc45qeTPCMjqU1aqJj6LY8SqXpF" +
+        "P1VXMX3z+vzZc0qMTVQ/yQolY/pOGnoq+LjQ12YgpSWTPFMmpgNrhyeMmd5A5olpFUOpJnl2Weg8saZV6Ctmhlom/VqUZyzwvIjlSaqo4P00" +
+        "l8oBEC0vY3rmn1xElAlen+0mNhFcF2OiY+pTwXtuceZTYmOaqixV8pXVVPDUCG4FfIM5/OHMCs7cF9b7r+geVHyCCh7hJ1SwhDnM9mgvDmq/" +
+        "YgkVlniLN9s6potxgx002AElxu3ZmiqonQ0VfCQ8zkabqZs1v6ltOYdr5xdh7Rw+OYc7zK7sP5E/wAx+wcz1jR8J3mCJU1jBAioSeEF0pJt2" +
+        "0017t5v23jlpwfVLLfhb5pzcygr4DpULhTnewRJW5F+g3j5trE6v5absESq8wwecwgKWeIslrBrlftxOg9vZxe0cutbP8APvHRjew2+CH3AK" +
+        "c3yP5ZGpROuYbnR88F/qOc9ggSUJ9/xs51GtaFO2TmAbD4E1L0/8BVBLAwQUAAAACAAAAHJdFqmE5yYBAAD0AQAAGAAAAHhsL3dvcmtzaGVl" +
+        "dHMvc2hlZXQyLnhtbHWRUUoDMRRFtxLev01nCiIlSSlUN2BdQJhJ2+AkKUmYqX9a1yGiKyhCsQjqFt7sSKZTS5X27xHeuTm5YYOFKUipfNDO" +
+        "ckg6XSDKZi7XdsrhZnx1dgEkRGlzWTirONypAAPBKudvw0ypSBamsIHDLMZ5n9KQzZSRoePmyi5MMXHeyBg6zk9pmHsl8y1kCpp2u+fUSG1B" +
+        "sFwbZRsB4tWEwzDpj1Oggm13RzJKwbyriOeQgGBZMwwTIJGDtoW26jp6EEwHwaLAV9zgN6NRMNqc0GxHjE4ST7jCd3zDFX7iBtdH2PFJ9qVe" +
+        "4qpe1o/1w1+OelfttdNf7VH6L4iE9lG7uOf6Hr9wjR/1kqRHRC7TLdFr2mnN2sAAgpWix2h5eDs9KJDuf0z8AFBLAQIUABQAAAAIAAAAcl23" +
+        "i4LqLQEAACgEAAATAAAAAAAAAAAAAAAAAAAAAABbQ29udGVudF9UeXBlc10ueG1sUEsBAhQAFAAAAAAAAAByXQjqkx0nAQAAJwEAAAsAAAAA" +
+        "AAAAAAAAAAAAXgEAAF9yZWxzLy5yZWxzUEsBAhQAFAAAAAgAAAByXXWF8mXEAAAAQQEAAA8AAAAAAAAAAAAAAAAArgIAAHhsL3dvcmtib29r" +
+        "LnhtbFBLAQIUABQAAAAAAAAAcl16C4gUPwMAAD8DAAAaAAAAAAAAAAAAAAAAAJ8DAAB4bC9fcmVscy93b3JrYm9vay54bWwucmVsc1BLAQIU" +
+        "ABQAAAAIAAAAcl0muzp0wgEAAPMFAAANAAAAAAAAAAAAAAAAABYHAAB4bC9zdHlsZXMueG1sUEsBAhQAFAAAAAgAAAByXWaqCQohAQAAxQEA" +
+        "ABQAAAAAAAAAAAAAAAAAAwkAAHhsL3NoYXJlZFN0cmluZ3MueG1sUEsBAhQAFAAAAAgAAAByXaNoFY3jAQAAYgcAABMAAAAAAAAAAAAAAAAA" +
+        "VgoAAHhsL3RoZW1lL3RoZW1lMS54bWxQSwECFAAUAAAACAAAAHJdit/PX8UBAAC8AwAAGAAAAAAAAAAAAAAAAABqDAAAeGwvd29ya3NoZWV0" +
+        "cy9zaGVldDEueG1sUEsBAhQAFAAAAAgAAAByXRaphOcmAQAA9AEAABgAAAAAAAAAAAAAAAAAZQ4AAHhsL3dvcmtzaGVldHMvc2hlZXQyLnht" +
+        "bFBLBQYAAAAACQAJAEkCAADBDwAAAAA="},
+      {title: "Неполный", filename: "uchebny-nepolny.xlsx", data:
+        "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"}
+    ];
+    let importRun = 0;
+    let preview = null;
+
+    function openImport() {
+      byId("import-notice").textContent = "";
+      byId("import").hidden = false;
+      byId("open-import").setAttribute("aria-expanded", "true");
+      byId("samples").querySelector("button").focus();
+    }
+
+    function closeImport() {
+      importRun++;
+      clearPreview();
+      byId("import").hidden = true;
+      byId("open-import").setAttribute("aria-expanded", "false");
+      byId("open-import").focus();
+    }
+
+    function clearPreview() {
+      preview = null;
+      byId("confirm-import").disabled = true;
+      byId("preview-wrap").hidden = true;
+      byId("preview-rows").replaceChildren();
+      byId("warnings").hidden = true;
+      byId("warnings").replaceChildren();
+      byId("import-message").textContent = "";
+    }
+
+    function importChange(record, existing) {
+      if (!existing) return "Новый";
+      const changes = [];
+      if (!existing.active) changes.push("Вернётся из архива");
+      if (importedTextChanged(record, existing)) changes.push("Статус изменился");
+      return changes.join(" · ") || "Без изменений";
+    }
+
+    function importedTextChanged(record, existing) {
+      return record.statusAvailable && (existing.imported?.text ?? existing.confirmed.text) !== record.text;
+    }
+
+    function toArchive(result) {
+      if (!result.records.length) return [];
+      const incoming = new Set(result.records.map(record => record.id));
+      return projects.filter(project => project.active && result.completeYears.has(project.year) && !incoming.has(project.id));
+    }
+
+    function renderPreview(result) {
+      const {filename, records, warnings} = result;
+      const existing = new Map(projects.map(project => [project.id, project]));
+      const rows = document.createDocumentFragment();
+      for (const record of records) {
+        const row = element("tr");
+        const status = element("td", record.statusAvailable ? statusText(record.text) : "Колонка не найдена");
+        status.append(element("div", record.address, "muted"));
+        row.append(element("td", record.year), element("td", record.name), status,
+          element("td", importChange(record, existing.get(record.id))));
+        rows.append(row);
+      }
+      for (const project of toArchive(result)) {
+        const row = element("tr");
+        row.append(element("td", project.year), element("td", project.name),
+          element("td", statusText(project.confirmed.text)), element("td", "В архив"));
+        rows.append(row);
+      }
+      byId("preview-rows").replaceChildren(rows);
+      byId("preview-wrap").hidden = !records.length;
+      byId("confirm-import").disabled = !records.length;
+      byId("warnings").replaceChildren(...warnings.slice(0, 100).map(warning => element("li", warning)));
+      if (warnings.length > 100) byId("warnings").append(element("li", "Ещё замечаний: " + (warnings.length - 100)));
+      byId("warnings").hidden = !warnings.length;
+      byId("import-message").textContent = filename + (records.length
+        ? " · Предпросмотр, отобрано: " + records.length
+        : " · Отбор пуст. Текущий список сохранён.");
+    }
+
+    async function previewFile(file) {
+      const run = ++importRun;
+      clearPreview();
+      byId("import-message").textContent = "Читаю " + file.name + "…";
+      try {
+        if (file.size > ZIP_LIMIT) throw Error("Файл XLSX больше 64 МБ.");
+        const result = await parseWorkbook(await file.arrayBuffer(), file.name);
+        if (run !== importRun) return;
+        preview = result;
+        renderPreview(result);
+      } catch (error) {
+        if (run === importRun) byId("import-message").textContent = "XLSX не прочитан. " + error.message;
+      }
+    }
+
+    function mergeImport(result) {
+      const existing = new Map(projects.map(project => [project.id, project]));
+      for (const project of toArchive(result)) existing.set(project.id, {...project, active: false});
+      for (const record of result.records) {
+        const previous = existing.get(record.id);
+        const incoming = {
+          ...version(record.text, "", result.filename + " · " + record.year + "!" + record.address),
+          address: record.address
+        };
+        const keepConfirmed = previous && (previous.review || previous.imported || !record.statusAvailable);
+        const imported = record.statusAvailable ? incoming : previous?.imported ?? null;
+        let pending = previous?.pending ?? null;
+        if (keepConfirmed && record.statusAvailable) {
+          if (record.text === previous.confirmed.text) pending = null;
+          else if (importedTextChanged(record, previous)) pending = incoming;
+        }
+        existing.set(record.id, {
+          ...previous, id: record.id, year: record.year, name: record.name, active: true, imported, pending,
+          confirmed: keepConfirmed ? previous.confirmed : incoming
+        });
+      }
+      return [...existing.values()];
+    }
+
+    function confirmImport() {
+      if (!preview?.records.length) return;
+      const count = preview.records.length;
+      const archived = toArchive(preview).length;
+      if (!saveProjects(mergeImport(preview))) {
+        byId("import-message").textContent = byId("storage-notice").textContent;
+        return;
+      }
+      renderProjects();
+      renderProject();
+      closeImport();
+      byId("review-notice").textContent = "";
+      byId("import-notice").textContent = "Импорт завершён. Строк загружено: " + count + "."
+        + (archived ? " В архиве: " + archived + "." : "");
+    }
+
+    const xlsxType = "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet";
+    for (const sample of samples) {
+      const button = element("button", sample.title + " · открыть", "sample");
+      button.type = "button";
+      button.addEventListener("click", () => {
+        previewFile(new File([Uint8Array.fromBase64(sample.data)], sample.filename, {type: xlsxType}));
+      });
+      const download = element("a", sample.title + " · скачать XLSX", "sample");
+      download.href = "data:" + xlsxType + ";base64," + sample.data;
+      download.download = sample.filename;
+      byId("samples").append(button, download);
+    }
+    byId("open-import").addEventListener("click", () => {
+      if (byId("import").hidden) openImport();
+      else closeImport();
+    });
+    byId("cancel-import").addEventListener("click", closeImport);
+    byId("confirm-import").addEventListener("click", confirmImport);
+
+    let copyRun = 0;
+    function clearSummary() {
+      copyRun++;
+      byId("summary-text").value = "";
+      byId("summary-result").hidden = true;
+      byId("copy-notice").textContent = "";
+    }
+
+    function versionDetails(value) {
+      const lines = [dateText(value.date), "Источник: " + (value.source || "не указан")];
+      const url = httpUrl(value.link);
+      if (url) lines.push("Ссылка: " + url);
+      return lines;
+    }
+
+    function buildSummary(active) {
+      const sections = active.map(project => {
+        const {confirmed, review, pending} = project;
+        const disputed = review?.outcome === "disputed";
+        const mark = [outcomeLabels[review?.outcome], pending ? "Ждёт сверки" : ""].filter(Boolean).join(" · ");
+        const lines = [
+          project.name + " (" + project.year + ")",
+          "Сверка: " + (mark || "Не сверялся"),
+          (disputed ? "Вариант 1. Подтверждённый статус: " : "Подтверждённый статус: ") + statusText(confirmed.text),
+          ...versionDetails(confirmed),
+          "Что изменилось: " + (review?.change || "Не указано")
+        ];
+        if (disputed) {
+          lines.push("Вариант 2. Спорный статус: " + statusText(review.update.text), ...versionDetails(review.update));
+        } else if (review?.outcome === "unchanged") {
+          lines.push("Реквизиты сверки", ...versionDetails(review.update));
+        }
+        return lines.join("\n");
+      });
+      return ["Сводка по проектам", ...sections].join("\n\n");
+    }
+
+    async function copySummary() {
+      const run = ++copyRun;
+      const active = projects.filter(project => project.active);
+      const notice = byId("copy-notice");
+      if (!active.length) {
+        notice.textContent = "Нет активных проектов для сводки.";
+        return;
+      }
+      const area = byId("summary-text");
+      area.value = buildSummary(active);
+      byId("summary-result").hidden = false;
+      notice.textContent = "";
+      let copied = false;
+      try {
+        if (navigator.clipboard?.writeText) {
+          await navigator.clipboard.writeText(area.value);
+          copied = true;
+        }
+      } catch {
+        // Some Chrome policies restrict the Clipboard API on local file pages.
+      }
+      if (run !== copyRun) return;
+      if (!copied) {
+        area.focus();
+        area.select();
+        try { copied = document.execCommand("copy"); } catch { /* Leave the text selected for manual copying. */ }
+        if (copied) byId("copy-summary").focus();
+      }
+      notice.textContent = copied
+        ? "Сводка скопирована. Проектов: " + active.length + "."
+        : "Chrome ограничил автоматическое копирование. Сводка выделена, её можно скопировать вручную.";
+    }
+
+    byId("copy-summary").addEventListener("click", copySummary);
+    renderProjects();
+    renderProject();
+  </script>
+</body>
+</html>
